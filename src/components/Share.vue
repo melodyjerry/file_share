@@ -3,7 +3,7 @@
     <div class="name">{{ item.name }}</div>
     <div class="size">{{ renderSize(item.size) }}</div>
     <div class="time">{{ format(item.time) }}</div>
-    <div class="expire_time">{{ format(expire_time(item.time,item.expire)) }}</div>
+    <div class="expire_time">{{ expire_time(item.time,item.expire) === -1 ? '未知过期时间' :format(expire_time(item.time,item.expire)) }}</div>
     <div class="mask">
       <a @click="copy(item.url)">URL</a> |
       <a @click="remove">删除</a>
@@ -37,6 +37,7 @@ export default {
     },
     expire_time(){
       return function (start_time,expire){
+        if (expire === undefined || expire === null) return -1;
         return start_time + expire * 1000;
       }
     }

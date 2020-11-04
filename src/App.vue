@@ -36,7 +36,7 @@
             </el-select>
           </template>
           <template v-else-if="configParameter.type === 'number'">
-            <el-input-number size="mini" v-model="nowUploader.config[configParameter.name]" :min="configParameter.min||1" :max="configParameter.max||99999"></el-input-number>
+            <el-input-number size="mini" v-model="nowUploader.config[configParameter.name]" :min="configParameter.min === undefined ?1: 0" :max="configParameter.max||99999"></el-input-number>
           </template>
           <template v-else>
             <el-input size="mini"  v-model="nowUploader.config[configParameter.name]"></el-input>
@@ -137,17 +137,26 @@ export default {
       try {
         var info = await this.nowUploader.instance.upload(file,this.nowUploader.config);
       }catch (e){
+        console.log(e);
         this.$message.error(e.message);
         return;
+      }finally {
+        this.$nextTick(() => { // 以服务的方式调用的 Loading 需要异步关闭
+          loading.close();
+        });
       }
+      if (typeof info === "string"){
+        info = {
+          url: info,
+          expire: null
+        }
+      }
+
+      this.addShare(info,file);
+
       if (this.autoCopy){
         window.utils.clipboard.writeText(info.url);
       }
-      this.addShare(info,file);
-
-      this.$nextTick(() => { // 以服务的方式调用的 Loading 需要异步关闭
-        loading.close();
-      });
     },
 
     changeActiveApi(){
@@ -173,6 +182,7 @@ export default {
         size: file.size,
         time: Date.now()
       };
+      console.log(item);
       this.list.unshift(item);
       //判断是否超了
       if (this.list.length > 100){

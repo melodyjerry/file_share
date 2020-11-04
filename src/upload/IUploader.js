@@ -1,4 +1,6 @@
 import UploadException from "@/upload/exception/UploadException";
+import axios from 'axios'
+axios.defaults.withCredentials = false;
 
 class IUploader{
     /**

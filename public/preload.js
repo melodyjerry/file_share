@@ -5,24 +5,24 @@ const process = require('process');
 
 window.inUtools = true;
 window.utils = {
-  clipboard: {
+    clipboard: {
     writeText: (text) => {
       clipboard.writeText(text)
     }
-  },
-  showDialog: (type,title,message,buttons,callback) => {
+    },
+    showDialog: (type,title,message,buttons,callback) => {
     dialog.showMessageBox({
     type: type,
     title: title,
     message: message,
     buttons: buttons
-	},callback);
-  },
-  showOpenDialog: (name='文件',extensions=[]) => {
+    },callback);
+    },
+    showOpenDialog: (name='文件',extensions=[]) => {
     return dialog.showOpenDialog(remote.getCurrentWindow(), { filters: [{ 'name': name, extensions: extensions }], properties: ['openFile'] })
-  },
-  showMssage:(text,title='utools')=>{
-	notifier.notify(
+    },
+    showMssage:(text,title='utools')=>{
+    notifier.notify(
      {
        title: title,
        subtitle: 'utools',
@@ -35,16 +35,16 @@ window.utils = {
          console.log(err)
        }
      }
-   )
-  },
-  openExternal: shell.openExternal,
-  readFile:(pathObj)=>{
-	  var bitmap = fs.readFileSync(pathObj.path);
-	  var file = new File(bitmap,pathObj.name);
-	  console.log("readFile",bitmap,file)
-	  return file;
-  },
-  openDefaultBrowser: function (url) {
+    )
+    },
+    openExternal: shell.openExternal,
+    readFile:(pathObj)=>{
+      var bitmap = fs.readFileSync(pathObj.path);
+      var file = new File(bitmap,pathObj.name);
+      console.log("readFile",bitmap,file)
+      return file;
+    },
+    openDefaultBrowser: function (url) {
     var exec = require('child_process').exec;
     switch (process.platform) {
       case "darwin":
@@ -56,8 +56,8 @@ window.utils = {
       default:
         exec('xdg-open', [url]);
     }
-  },
-  db: function(name,value=undefined){
+    },
+    db: function(name,value=undefined){
         let obj = utools.db.get(name);
         if (value !== undefined){
             let putdata = {
@@ -72,5 +72,18 @@ window.utils = {
         }
         if (obj == null) return null;
         return obj.data;
+    },
+    request(url,data=null,method='get',headers={}){
+        var request = require('request');
+        return new Promise(resolve => {
+            request({
+                url: url,
+                method: method,
+                headers: headers,
+                body: data
+            }, function(error, response, body) {
+                resolve(response);
+            });
+        })
     }
 }
