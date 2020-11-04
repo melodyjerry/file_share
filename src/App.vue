@@ -112,11 +112,9 @@ export default {
     this.initConfig = true;
 
 
-    utools.onPluginEnter(async ({code, type, payload, optional}) => {
-      for(let fileObj of payload){
-        let file = window.utils.readFile(fileObj);
-        await this.upload(file);
-      }
+    utools.onPluginEnter(({code, type, payload, optional}) => {
+      if (type === "files") this.uploads(payload);
+
       console.log('用户进入插件', code, type, payload)
     })
   },
@@ -124,7 +122,12 @@ export default {
     async uploadRequest(params){
       await this.upload(params.file)
     },
-
+    async uploads(payload){
+      for(let fileObj of payload){
+        let file = window.utils.readFile(fileObj);
+        await this.upload(file);
+      }
+    },
     async upload(file){
       const loading = this.$loading({
         lock: true,
