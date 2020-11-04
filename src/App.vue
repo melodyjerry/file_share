@@ -68,7 +68,7 @@ export default {
   data(){
     return {
       uploaders: uploaders,
-      active_uploader: "",
+      active_uploader: "QscboxUploader",
       list: [],
 
       dialogTableVisible: false,
@@ -104,8 +104,6 @@ export default {
   mounted(){
     if (window.utils.db("active_uploader")){
       this.active_uploader = window.utils.db("active_uploader");
-    }else{
-      this.active_uploader = uploaders[0].name;
     }
     this.autoCopy = window.utils.db('autoCopy')||false;
     this.list = this.getShareList();

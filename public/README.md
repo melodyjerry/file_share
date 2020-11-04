@@ -1,7 +1,7 @@
 # 支持的网站
 - [x] file.io
 - [x] firestorage.jp
-- [x] Qscbox
+- [x] www.qsc.zju.edu.cn/box/
 
 
 # 开源
