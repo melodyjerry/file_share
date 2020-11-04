@@ -1,27 +1,234 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <el-upload
+        class="upload-box"
+        drag
+        :http-request="uploadRequest"
+        action=""
+        :show-file-list="false"
+        multiple>
+      <i class="el-icon-upload"></i>
+    </el-upload>
+    <div class="tools">
+      <div class="left-box">
+        <div class="span">
+          上传源：
+          <el-select placeholder="请选择" size="mini" v-model="active_uploader" @change="changeActiveApi">
+            <el-option v-for="uploader in uploaders" :label="uploader.label" :value="uploader.name"></el-option>
+          </el-select>
+        </div>
+        <el-checkbox class="span" v-model="autoCopy">自动复制</el-checkbox>
+        <el-button v-if="nowUploader && nowUploader.configParameters" size="mini" icon="el-icon-setting" type="primary" class="skin-button" @click="openUploadConfigDialog">设置</el-button>
+      </div>
+      <div class="right-box" >
+        <el-button size="mini" type="danger" icon="el-icon-delete" class="skin-button" @click="clearShare">清空</el-button>
+      </div>
+      <div class="clearfix"></div>
+    </div>
+    <share-list :list="list" @remove="removeShare"></share-list>
+
+    <el-dialog title="配置" :visible.sync="dialogTableVisible">
+      <el-form v-if="nowUploader" ref="form" label-width="80px">
+        <el-form-item v-for="configParameter in nowUploader.configParameters" :label="configParameter.label">
+          <template v-if="configParameter.type === 'select'">
+            <el-select size="mini"  v-model="nowUploader.config[configParameter.name]">
+              <el-option v-for="option in configParameter.options" :label="option.label" :value="option.value"></el-option>
+            </el-select>
+          </template>
+          <template v-else-if="configParameter.type === 'number'">
+            <el-input-number size="mini" v-model="nowUploader.config[configParameter.name]" :min="configParameter.min||1" :max="configParameter.max||99999"></el-input-number>
+          </template>
+          <template v-else>
+            <el-input size="mini"  v-model="nowUploader.config[configParameter.name]"></el-input>
+          </template>
+        </el-form-item>
+      </el-form>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+const uploaders = require('./plugins/uploaders').default;
+for(let uploader of uploaders){
+  uploader.config = {};
+  if (uploader.configParameters){
+    for(let uploaderElement of uploader.configParameters){
+      uploader.config[uploaderElement.name] = uploaderElement.value || null;
+    }
+  }
+}
+console.log(uploaders);
 
+import ShareList from "@/components/ShareList";
+import IUploader from "@/upload/IUploader";
+import UploadException from "@/upload/exception/UploadException";
 export default {
-  name: 'App',
-  components: {
-    HelloWorld
+  name: 'app',
+  components: {ShareList},
+  data(){
+    return {
+      uploaders: uploaders,
+      active_uploader: "",
+      list: [],
+
+      dialogTableVisible: false,
+
+      initConfig: false,
+      autoCopy: false
+    }
+  },
+  watch:{
+    'nowUploader.config':{
+      handler(n,o){
+        if (this.initConfig === false) return;
+        //保存配置
+        window.utils.db("uploader_config_" + this.nowUploader.name,this.nowUploader.config);
+      },
+      // immediate: true,  //刷新加载 立马触发一次handler
+      deep: true
+    },
+    autoCopy(){
+      window.utils.db('autoCopy',this.autoCopy);
+    }
+  },
+  computed:{
+    nowUploader(){
+      for(let uploader of this.uploaders){
+        if (uploader.name === this.active_uploader){
+          return uploader;
+        }
+      }
+      return null;
+    }
+  },
+  mounted(){
+    if (window.utils.db("active_uploader")){
+      this.active_uploader = window.utils.db("active_uploader");
+    }else{
+      this.active_uploader = uploaders[0].name;
+    }
+    this.autoCopy = window.utils.db('autoCopy')||false;
+    this.list = this.getShareList();
+    this.initConfig = true;
+
+
+    utools.onPluginEnter(async ({code, type, payload, optional}) => {
+      for(let fileObj of payload){
+        let file = window.utils.readFile(fileObj);
+        await this.upload(file);
+      }
+      console.log('用户进入插件', code, type, payload)
+    })
+  },
+  methods:{
+    async uploadRequest(params){
+      await this.upload(params.file)
+    },
+
+    async upload(file){
+      const loading = this.$loading({
+        lock: true,
+        text: '正在上传 ' + file.name,
+        spinner: 'el-icon-loading',
+        background: 'rgba(0, 0, 0, 0.7)'
+      });
+
+      try {
+        var info = await this.nowUploader.instance.upload(file,this.nowUploader.config);
+      }catch (e){
+        this.$message.error(e.message);
+        return;
+      }
+      if (this.autoCopy){
+        window.utils.clipboard.writeText(info.url);
+      }
+      this.addShare(info,file);
+
+      this.$nextTick(() => { // 以服务的方式调用的 Loading 需要异步关闭
+        loading.close();
+      });
+    },
+
+    changeActiveApi(){
+      window.utils.db("active_uploader",this.active_uploader);
+
+      let uploaderConfig = window.utils.db("uploader_config_" + this.nowUploader.name);
+      if (uploaderConfig){
+        this.nowUploader.config = {
+          ...this.nowUploader.config,
+          ...uploaderConfig
+        }
+      }
+    },
+
+    openUploadConfigDialog(){
+      this.dialogTableVisible = true;
+    },
+
+    addShare(info,file){
+      let item = {
+        ...info,
+        name: file.name,
+        size: file.size,
+        time: Date.now()
+      };
+      this.list.unshift(item);
+      //判断是否超了
+      if (this.list.length > 100){
+        this.list.splice(100,this.list.length - 100);
+      }
+      window.utils.db("share_list",this.list);
+    },
+    removeShare(index){
+      this.list.splice(index,1);
+      window.utils.db("share_list",this.list);
+    },
+    clearShare(){
+      this.list = [];
+      window.utils.db("share_list",this.list);
+    },
+    getShareList(){
+      return window.utils.db("share_list") || [];
+    }
   }
 }
 </script>
 
-<style lang="stylus">
-#app
-  font-family Avenir, Helvetica, Arial, sans-serif
-  -webkit-font-smoothing antialiased
-  -moz-osx-font-smoothing grayscale
-  text-align center
-  color #2c3e50
-  margin-top 60px
+<style lang="stylus" rel="stylesheet/stylus">
+.skin-button{
+  background: #f57681!important;
+  border: #f57681!important;
+}
+.upload-box{
+  .el-upload{
+    width: 100%;
+  }
+  .el-upload-dragger{
+    width: 100%;
+    height: 150px;
+    line-height: 150px;
+    background: #f57681;
+    border-radius: 10px;
+    border: unset;
+    .el-icon-upload{
+      color: #fff;
+    }
+  }
+}
+.tools{
+  margin: 10px 0;
+  .left-box{
+    float: left;
+    .span{
+      margin-right: 10px;
+      display: inline-block;
+    }
+  }
+  .right-box{
+    float: right;
+  }
+  .clearfix{
+    clear:both;
+  }
+}
 </style>
