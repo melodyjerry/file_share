@@ -40,9 +40,17 @@ window.utils = {
     openExternal: shell.openExternal,
     readFile:(pathObj)=>{
       var bitmap = fs.readFileSync(pathObj.path);
-      var file = new File(bitmap,pathObj.name);
-      console.log("readFile",bitmap,file)
+      class MyFile extends File{
+          setPath(path){
+              this.temp_path = path;
+          }
+      }
+      var file = new MyFile(bitmap,pathObj.name);
+      file.setPath(pathObj.path);
       return file;
+    },
+    createWriteStream(path){
+        return fs.createWriteStream(path)
     },
     openDefaultBrowser: function (url) {
     var exec = require('child_process').exec;
@@ -73,17 +81,17 @@ window.utils = {
         if (obj == null) return null;
         return obj.data;
     },
-    request(url,data=null,method='get',headers={}){
+    request(params={}){
         var request = require('request');
-        return new Promise(resolve => {
-            request({
-                url: url,
-                method: method,
-                headers: headers,
-                body: data
-            }, function(error, response, body) {
-                resolve(response);
+        return new Promise((resolve,reject) => {
+            request(params, function(error, response, body) {
+                if (error !== null) reject(error);
+                resolve(response.toJSON());
             });
         })
+    },
+    formdata(){
+        const FormData = require('form-data');
+        return new FormData();
     }
 }

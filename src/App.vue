@@ -68,7 +68,7 @@ export default {
   data(){
     return {
       uploaders: uploaders,
-      active_uploader: "QscboxUploader",
+      active_uploader: "CowtransferUploader",
       list: [],
 
       dialogTableVisible: false,
@@ -180,7 +180,8 @@ export default {
         ...info,
         name: file.name,
         size: file.size,
-        time: Date.now()
+        time: Date.now(),
+        path: file.path || file.temp_path
       };
       console.log(item);
       this.list.unshift(item);
