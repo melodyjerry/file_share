@@ -61,7 +61,12 @@ class CowtransferUploader extends IUploader{
         uploadFormData.append("token",preRes.data.uptoken);
         uploadFormData.append("key",preRes.data.prefix + '/' + preRes.data.transferguid + "/" + encodeURI(file.name));
         uploadFormData.append("fname",encodeURI(file.name));
-        let uploadRes = await axios.post("https://upload.qiniup.com/",uploadFormData);
+        let uploadRes = await axios.post("https://upload.qiniup.com/",uploadFormData,{
+            onUploadProgress: progressEvent => {
+                let persent = (progressEvent.loaded / progressEvent.total * 100 | 0)
+                console.log(progressEvent,persent);
+            }
+        });
         console.log(uploadRes);
 
         let uploadedFormData = new FormData();
@@ -108,7 +113,7 @@ class CowtransferUploader extends IUploader{
             // proxy: "http://127.0.0.1:7788",
             // rejectUnauthorized: false,
         });
-        // console.log(preRes);
+        console.log(preRes);
         return {
             ...preRes,
             data: JSON.parse(preRes.body)

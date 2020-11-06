@@ -3,6 +3,7 @@ import axios from 'axios'
 axios.defaults.withCredentials = false;
 
 class IUploader{
+
     /**
      * 上传文件
      * @param file 文件
@@ -37,6 +38,7 @@ class IUploader{
             }
         })
     }
+
 }
 
 export default IUploader;
